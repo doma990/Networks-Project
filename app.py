@@ -7,4 +7,3 @@ app = Flask(__name__)
 def home():
     return "Adam"
 
-
