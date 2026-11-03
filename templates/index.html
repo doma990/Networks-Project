@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Networks Chat</title>
+  <style>
+    body { font: 1rem system-ui, sans-serif; margin: 0; }
+    main { max-width: 32rem; margin: auto; padding: 1rem; }
+    form, label { display: grid; gap: 0.5rem; }
+    input, button { font: inherit; padding: 0.6rem; }
+    #messages { min-height: 6rem; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Networks Chat</h1>
+    <p id="status" role="status">Connecting…</p>
+
+    <h2>Messages</h2>
+    <ul id="messages" role="log" aria-label="Messages"></ul>
+
+    <form id="chat-form">
+      <label>
+        Username
+        <input name="username" required maxlength="24">
+      </label>
+      <label>
+        Message
+        <input name="message" required maxlength="500">
+      </label>
+      <button id="send" type="submit" disabled>Send</button>
+    </form>
+  </main>
+
+  <script>
+    const form = document.querySelector("#chat-form");
+    const status = document.querySelector("#status");
+    const messages = document.querySelector("#messages");
+    const sendButton = document.querySelector("#send");
+    const usernameInput = form.elements.namedItem("username");
+    const messageInput = form.elements.namedItem("message");
+
+    const scheme = location.protocol === "https:" ? "wss:" : "ws:";
+    const socket = new WebSocket(`${scheme}//${location.host}/ws`);
+
+    socket.addEventListener("open", () => {
+      status.textContent = "Connected";
+      sendButton.disabled = false;
+    });
+
+    socket.addEventListener("message", (event) => {
+      const { username, text } = JSON.parse(event.data);
+      const entry = document.createElement("li");
+      entry.textContent = `${username}: ${text}`;
+      messages.append(entry);
+    });
+
+    socket.addEventListener("close", () => {
+      status.textContent = "Disconnected. Reload to try again.";
+      sendButton.disabled = true;
+    });
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      const username = usernameInput.value.trim();
+      const text = messageInput.value.trim();
+      if (!username || !text || socket.readyState !== WebSocket.OPEN) return;
+
+      socket.send(JSON.stringify({ username, text }));
+      messageInput.value = "";
+    });
+  </script>
+</body>
+</html>
